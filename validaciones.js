@@ -24,7 +24,7 @@ export const loginValidator = [
 ]
 export const cinedatos =[
     body('nombre').isString().isLength({min:2}).withMessage('El nombre debe ser una cadena de texto'),
-    body('codigo').isString().isLength({min:5}).withMessage('La direccion debe ser una cadena de texto'),
+    body('codigo').isString().isLength({max:3}).withMessage('El codigo debe tener max 3 numeros'),
     body('direccion').isString().isLength({min:9}).withMessage('El telefono debe ser una cadena de texto'),
-    body('ciudad').isInt({min:1}).withMessage('El numero de salas debe ser un numero entero positivo'),
+    body('ciudad').isLength({min:2}).withMessage('La ciudad debe ser una cadena de texto'),
 ]

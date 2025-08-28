@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import { loginValidator, userentrada } from './validaciones.js';
+import jwt from 'jsonwebtoken';
 // aqui van los imports
 const userRoute = express.Router();
 userRoute.post('/register', userentrada, async (req, res) => {
@@ -20,19 +21,37 @@ userRoute.post('/register', userentrada, async (req, res) => {
     const result = await db.collection("usuarios").insertOne({ ...capture, password: hash });
     res.send(result);
 });
-userRoute.post('/login', loginValidator, async (req, res) => {
-    const db = await conectarMongo();
-    const user = await db.collection("usuarios").findOne({ username: req.body.username });
-    if (!user) {
-        return res.status(401).send({ message: "Login incorrecto" });
-    }
-    const valid = bcrypt.compareSync(req.body.password, user.password);
-    if (!valid) {
-        return res.status(401).send({ message: "Login incorrecto no esta encriptado" });
-    }
-    res.send({ message: "Login correcto", user });
+// userRoute.post('/login', loginValidator, async (req, res) => {
+//     const db = await conectarMongo();
+//     const user = await db.collection("usuarios").findOne({ username: req.body.username });
+//     if (!user) {
+//         return res.status(401).send({ message: "Login incorrecto" });
+//     }
     
-});
+//     if (!valid) {
+//         return res.status(401).send({ message: "Login incorrecto no esta encriptado" });
+//     }
+//     res.send({ message: "Login correcto", user });
+    
+// });
+userRoute.post('/login',loginValidator,async (req,res)=>{
+    const db = await conectarMongo();
+    console.log(req.body);
+    const error = validationResult(req);
+    if (!error.isEmpty()) {
+        return res.status(400).json({ errors: error.array() });
+    }
+    const user = await db.collection("usuarios").findOne({username: req.body.username});
+    if (user) {
+        if (bcrypt.compareSync(req.body.password, user.password)) {
+            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+            return res.send({ message: "Login correcto", token });
+        }
+    }
+    return res.status(401).send({ message: "Login incorrecto" });
+    
+    
+})
 
 userRoute.get ('/find', async(req, res)=>{
     const db = await conectarMongo();
