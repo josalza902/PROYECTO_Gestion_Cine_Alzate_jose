@@ -34,7 +34,7 @@ userRoute.post('/register', userentrada, async (req, res) => {
 //     res.send({ message: "Login correcto", user });
     
 // });
-userRoute.post('/login',loginValidator,async (req,res)=>{
+userRoute.post('/login',async (req,res)=>{
     const db = await conectarMongo();
     console.log(req.body);
     const error = validationResult(req);

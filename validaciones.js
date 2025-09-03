@@ -27,4 +27,30 @@ export const cinedatos =[
     body('codigo').isString().isLength({max:3}).withMessage('El codigo debe tener max 3 numeros'),
     body('direccion').isString().isLength({min:9}).withMessage('El telefono debe ser una cadena de texto'),
     body('ciudad').isLength({min:2}).withMessage('La ciudad debe ser una cadena de texto'),
+    body('salas').isInt({min:1}).withMessage('El numero de salas debe ser un numero entero positivo'),
 ]
+export const updatecineValidator = cinedatos.filter((valor, indice)=>indice<=4)
+
+export const salasdatos = [
+    body('id').isString().isLength({max:4}).withMessage('El id debe tener max 4 caracteres'),
+    body('numerodesillas').isInt({min:1}).withMessage('El numero de sillas debe ser un numero entero positivo'),
+    body('cine').isString().isLength({max:3}).withMessage('el codigo debe tener max 3 numeros')
+]
+export const updatesalasValidator = salasdatos.filter((valor, indice)=>indice<=2)
+
+export const peliculadatos = [ 
+    body('codigo').isInt({min:3}).withMessage('El codigo debe ser un numero entero positivo y tener al menos 3 digitos'),
+    body('titulo').isString().isLength({min:2}).withMessage('El titulo debe ser una cadena de texto'),
+    body('sinopsis').isString().isLength({min:10}).withMessage('La sinopsis debe ser una cadena de texto y tener al menos 10 caracteres'),
+    body('reparto').isString().isLength({min:5}).withMessage('El reparto debe ser una cadena de texto y tener al menos 5 caracteres'),
+    body('clasificacion').isString().isLength({min:1}).withMessage('La clasificacion debe ser una cadena de texto'),
+    body('idioma').isString().isLength({min:2}).withMessage('El idioma debe ser una cadena de texto'),
+    body('director').isString().isLength({min:2}).withMessage('El director debe ser una cadena de texto'),
+    body('duracion').isInt({min:1}).withMessage('La duracion debe ser un numero entero positivo'),
+    body('genero').isString().isLength({min:2}).withMessage('El genero debe ser una cadena de texto'),
+    body('fechaestreno').isDate().withMessage('La fecha de estreno debe ser una fecha valida'),
+    body('trailer').isString().isLength({min:5}).withMessage('El trailer debe ser una cadena de texto y tener al menos 5 caracteres'),
+    body('imagen').isString().isLength({min:5}).withMessage('La imagen debe ser una cadena de texto y tener al menos 5 caracteres')
+]
+
+export const updatepeliculaValidator = peliculadatos.filter((valor, indice)=>indice >=1 && indice <=11)
