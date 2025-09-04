@@ -54,3 +54,16 @@ export const peliculadatos = [
 ]
 
 export const updatepeliculaValidator = peliculadatos.filter((valor, indice)=>indice >=1 && indice <=11)
+
+export const usuariodatos =[
+    body('identificacion').isInt().isLength({max:15}).withMessage('debe tener maximo 15 numeros'),
+    body('nombre').isString().isLength({min:2}).withMessage('El nombre debe ser una cadena de texto'),
+    body('apellidos').isString().isLength({min:2}).withMessage('Los apellidos deben ser una cadena de texto'),
+    body('correo').isEmail().withMessage('El correo debe ser un email valido'),
+    body('telefono').isInt().isLength({min:9}).withMessage('el telefono debe ser un integer y tener minimo 9 numeros'),
+
+]
+
+export const updateusuarioValidator = usuariodatos.filter((valor, indice)=>indice>=1 && indice <=4)
+
+
