@@ -1,16 +1,18 @@
 {
-  "name": "proyecto-express",
+  "name": "api-gestion-cines",
   "version": "1.0.0",
-  "description": "",
+  "description": "API REST académica para gestionar cines y salas con Express y MongoDB.",
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon proyecto_express --quiet"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "author": "jose",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
     "express-validator": "^7.2.1",
@@ -19,7 +21,6 @@
     "semver": "^7.7.2"
   },
   "devDependencies": {
-    "dotenv": "^17.2.1",
     "nodemon": "^3.1.10"
   }
 }

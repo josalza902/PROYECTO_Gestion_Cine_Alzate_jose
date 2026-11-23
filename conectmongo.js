@@ -1,13 +1,25 @@
-import { MongoClient } from "mongodb";
-import 'dotenv/config';
+import { MongoClient } from 'mongodb';
 
+let client;
+let connectionPromise;
 
-export default async function conectarMongo(){
-    const client = new MongoClient(process.env.URL_MONGODB);
-    await client.connect();
-    const josedb = client.db(process.env.DB_NAME);
-    return josedb
+export default async function conectarMongo() {
+  const uri = process.env.URL_MONGODB;
+  const databaseName = process.env.DB_NAME;
 
-} 
-conectarMongo().then(db=>console.log("Conectado a la base de datos", db.databaseName))
-.catch(err=>console.log("Error al conectar a la base de datos", err));
+  if (!uri || !databaseName) {
+    throw new Error('Configura URL_MONGODB y DB_NAME en el archivo .env.');
+  }
+
+  if (!connectionPromise) {
+    client = new MongoClient(uri);
+    connectionPromise = client.connect().catch((error) => {
+      client = undefined;
+      connectionPromise = undefined;
+      throw error;
+    });
+  }
+
+  await connectionPromise;
+  return client.db(databaseName);
+}

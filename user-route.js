@@ -1,82 +1,98 @@
 import express from 'express';
-import conectarMongo from './conectmongo.js';
 import { ObjectId } from 'mongodb';
 import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
-import { loginValidator, userentrada } from './validaciones.js';
 import jwt from 'jsonwebtoken';
-// aqui van los imports
+import { rateLimit } from 'express-rate-limit';
+import conectarMongo from './conectmongo.js';
+import { loginValidator, userentrada } from './validaciones.js';
+import { requireAdmin } from './auth.js';
+
 const userRoute = express.Router();
-userRoute.post('/register', userentrada, async (req, res) => {
-    const capture = req.body;
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    if (!capture.password) {
-        return res.status(400).json({ error: "La contraseña es obligatoria" });
-    }
-    const db = await conectarMongo();
-    const hash = bcrypt.hashSync(capture.password, 10);
-    const result = await db.collection("usuarios").insertOne({ ...capture, password: hash });
-    res.send(result);
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false
 });
-// userRoute.post('/login', loginValidator, async (req, res) => {
-//     const db = await conectarMongo();
-//     const user = await db.collection("usuarios").findOne({ username: req.body.username });
-//     if (!user) {
-//         return res.status(401).send({ message: "Login incorrecto" });
-//     }
-    
-//     if (!valid) {
-//         return res.status(401).send({ message: "Login incorrecto no esta encriptado" });
-//     }
-//     res.send({ message: "Login correcto", user });
-    
-// });
-userRoute.post('/login',async (req,res)=>{
-    const db = await conectarMongo();
-    console.log(req.body);
-    const error = validationResult(req);
-    if (!error.isEmpty()) {
-        return res.status(400).json({ errors: error.array() });
-    }
-    const user = await db.collection("usuarios").findOne({username: req.body.username});
-    if (user) {
-        if (bcrypt.compareSync(req.body.password, user.password)) {
-            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-            return res.send({ message: "Login correcto", token });
-        }
-    }
-    return res.status(401).send({ message: "Login incorrecto" });
-    
-    
-})
+const registrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
-userRoute.get ('/find', async(req, res)=>{
-    const db = await conectarMongo();
-    const result = await db.collection("usuarios").find({}).toArray();
-    res.send(result)
-})
-userRoute.put('/update/:id',userentrada,async(req,res)=>{
-    const db = await conectarMongo();
-    const result = await db.collection("usuarios").updateOne({_id:ObjectId.createFromHexString(req.params.id)},{$set:req.body});
-    res.send(result)
-})
-userRoute.delete('/borrar/:id',async(req,res)=>{
-    if(req.params.id === "68af97730a867983d7f38720"){
-        return res.status(400).send({message:"No se puede borrar el usuario admin"})    
-    }
-    const db = await conectarMongo();
-    const result = await db.collection("usuarios").deleteOne({_id:ObjectId.createFromHexString(req.params.id)});
-    if(result.deletedCount === 0){
-        return res.status(404).send({message:"No se ha encontrado el usuario"})
-    }
-    
-    res.send(result)
+userRoute.post('/register', registrationLimiter, userentrada, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-})
+  const db = await conectarMongo();
+  const existing = await db.collection('usuarios').findOne({ username: req.body.username });
+  if (existing) return res.status(409).json({ message: 'Ese correo ya está registrado.' });
 
+  const password = await bcrypt.hash(req.body.password, 12);
+  const user = {
+    username: req.body.username.trim().toLowerCase(),
+    nombre: req.body.nombre.trim(),
+    edad: Number(req.body.edad),
+    password,
+    role: 'user'
+  };
+  const result = await db.collection('usuarios').insertOne(user);
+  return res.status(201).json({ id: result.insertedId, username: user.username });
+});
 
+userRoute.post('/login', loginLimiter, loginValidator, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const db = await conectarMongo();
+  const username = req.body.username.trim().toLowerCase();
+  const user = await db.collection('usuarios').findOne({ username });
+  const passwordMatches = user && await bcrypt.compare(req.body.password, user.password);
+
+  if (!passwordMatches) return res.status(401).json({ message: 'Correo o contraseña incorrectos.' });
+
+  const token = jwt.sign(
+    { id: user._id.toString(), username: user.username, role: user.role || 'user' },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+  return res.json({ message: 'Inicio de sesión correcto.', token });
+});
+
+userRoute.get('/find', requireAdmin, async (req, res) => {
+  const db = await conectarMongo();
+  const users = await db.collection('usuarios').find({}, { projection: { password: 0 } }).toArray();
+  return res.json(users);
+});
+
+userRoute.put('/update/:id', requireAdmin, userentrada, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'El identificador no es válido.' });
+
+  const db = await conectarMongo();
+  const update = {
+    username: req.body.username.trim().toLowerCase(),
+    nombre: req.body.nombre.trim(),
+    edad: Number(req.body.edad)
+  };
+  if (req.body.password) update.password = await bcrypt.hash(req.body.password, 12);
+  const result = await db.collection('usuarios').updateOne(
+    { _id: new ObjectId(req.params.id) },
+    { $set: update }
+  );
+  if (result.matchedCount === 0) return res.status(404).json({ message: 'No se encontró el usuario.' });
+  return res.json({ message: 'Usuario actualizado.' });
+});
+
+userRoute.delete('/borrar/:id', requireAdmin, async (req, res) => {
+  if (!ObjectId.isValid(req.params.id)) return res.status(400).json({ message: 'El identificador no es válido.' });
+  const db = await conectarMongo();
+  const result = await db.collection('usuarios').deleteOne({ _id: new ObjectId(req.params.id) });
+  if (result.deletedCount === 0) return res.status(404).json({ message: 'No se encontró el usuario.' });
+  return res.json({ message: 'Usuario eliminado.' });
+});
 
 export default userRoute;

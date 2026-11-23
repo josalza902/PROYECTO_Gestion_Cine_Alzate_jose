@@ -1,74 +1,55 @@
 import express from 'express';
-import conectarMongo from './conectmongo.js';
 import { ObjectId } from 'mongodb';
 import { validationResult } from 'express-validator';
-import bcrypt from 'bcryptjs';
-import { cinedatos } from './validaciones.js';
+import conectarMongo from './conectmongo.js';
+import { salasdatos } from './validaciones.js';
+import { requireAdmin } from './auth.js';
+
 const salasrouter = express.Router();
-salasrouter.post('/register',cinedatos,async(req,res)=>{
-    const capture = req.body;
-    const errors = validationResult(req);
-    if(!errors.isEmpty()){
-        return res.status(400).json({errors:errors.array()});
-    }
-    try {
-        await conectarMongo();
-        const newSala = {
-            nombre: capture.nombre,
-            codigo: capture.codigo,
-            direccion: capture.direccion,
-            ciudad: capture.ciudad,
-            salas: capture.salas
-        };
-        const result = await db.collection('salas').insertOne(newSala);
-        res.status(201).json({message:'Sala registrada',id:result.insertedId});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message:'Error al registrar sala'});
-    }
+const salas = () => conectarMongo().then((db) => db.collection('salas'));
+
+salasrouter.post('/register', requireAdmin, salasdatos, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const sala = {
+    id: req.body.id,
+    numerodesillas: Number(req.body.numerodesillas),
+    cine: req.body.cine
+  };
+  const result = await (await salas()).insertOne(sala);
+  return res.status(201).json({ message: 'Sala registrada.', id: result.insertedId });
 });
-salasrouter.get ('/find', async(req, res)=>{
-    try {
-        await conectarMongo();
-        const salas = await db.collection('salas').find().toArray();
-        res.status(200).json(salas);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message:'Error al obtener salas'});
-    }
+
+salasrouter.get('/find', async (req, res) => {
+  const result = await (await salas()).find({}).toArray();
+  return res.json(result);
 });
-salasrouter.put('/update/:id',cinedatos,async(req,res)=>{
-    const { id } = req.params;
-    const capture = req.body;
-    const errors = validationResult(req);
-    if(!errors.isEmpty()){
-        return res.status(400).json({errors:errors.array()});
-    }
-    try {
-        await conectarMongo();
-        const result = await db.collection('salas').updateOne({_id:ObjectId(id)},{$set:capture});
-        if(result.modifiedCount === 0){
-            return res.status(404).json({message:'Sala no encontrada'});
-        }
-        res.status(200).json({message:'Sala actualizada'});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message:'Error al actualizar sala'});
-    }
+
+salasrouter.put('/update/:id', requireAdmin, salasdatos, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  if (!ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'El identificador de la sala no es válido.' });
+  }
+
+  const { id, numerodesillas, cine } = req.body;
+  const result = await (await salas()).updateOne(
+    { _id: new ObjectId(req.params.id) },
+    { $set: { id, numerodesillas: Number(numerodesillas), cine } }
+  );
+  if (result.matchedCount === 0) return res.status(404).json({ message: 'No se encontró la sala.' });
+  return res.json({ message: 'Sala actualizada.' });
 });
-salasrouter.delete('/borrar/:id',async(req,res)=>{
-    const { id } = req.params;
-    try {
-        await conectarMongo();
-        const result = await db.collection('salas').deleteOne({_id:ObjectId(id)});
-        if(result.deletedCount === 0){
-            return res.status(404).json({message:'Sala no encontrada'});
-        }
-        res.status(200).json({message:'Sala eliminada'});
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({message:'Error al eliminar sala'});
-    }
+
+salasrouter.delete('/borrar/:id', requireAdmin, async (req, res) => {
+  if (!ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ message: 'El identificador de la sala no es válido.' });
+  }
+
+  const result = await (await salas()).deleteOne({ _id: new ObjectId(req.params.id) });
+  if (result.deletedCount === 0) return res.status(404).json({ message: 'No se encontró la sala.' });
+  return res.json({ message: 'Sala eliminada.' });
 });
 
 export default salasrouter;

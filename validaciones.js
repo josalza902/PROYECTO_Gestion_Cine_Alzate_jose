@@ -1,4 +1,3 @@
-import e from 'express';
 import {body} from 'express-validator';
 
 export const  adminentrada =[
@@ -15,7 +14,7 @@ export const userentrada =[
     body('username').isEmail().withMessage('El email debe ser un email valido'),
     body('nombre').isString().isLength({min:2}).withMessage('El nombre debe ser una cadena de texto'),
     body('edad').isInt({min:0}).withMessage('La edad debe ser un numero entero positivo'),
-    body('password').isLength({min:6}).withMessage('La password debe tener al menos 6 caracteres')
+    body('password').isLength({min:8}).withMessage('La contraseña debe tener al menos 8 caracteres')
 ]
 export const updateuserValidator = userentrada.filter((valor, indice)=>indice<=3)
 export const loginValidator = [
@@ -24,17 +23,17 @@ export const loginValidator = [
 ]
 export const cinedatos =[
     body('nombre').isString().isLength({min:2}).withMessage('El nombre debe ser una cadena de texto'),
-    body('codigo').isString().isLength({max:3}).withMessage('El codigo debe tener max 3 numeros'),
-    body('direccion').isString().isLength({min:9}).withMessage('El telefono debe ser una cadena de texto'),
+    body('codigo').isString().isLength({min:1, max:3}).withMessage('El código debe tener entre 1 y 3 caracteres'),
+    body('direccion').isString().isLength({min:5}).withMessage('La dirección debe tener al menos 5 caracteres'),
     body('ciudad').isLength({min:2}).withMessage('La ciudad debe ser una cadena de texto'),
     body('salas').isInt({min:1}).withMessage('El numero de salas debe ser un numero entero positivo'),
 ]
 export const updatecineValidator = cinedatos.filter((valor, indice)=>indice<=4)
 
 export const salasdatos = [
-    body('id').isString().isLength({max:4}).withMessage('El id debe tener max 4 caracteres'),
+    body('id').isString().isLength({min:1, max:4}).withMessage('El ID debe tener entre 1 y 4 caracteres'),
     body('numerodesillas').isInt({min:1}).withMessage('El numero de sillas debe ser un numero entero positivo'),
-    body('cine').isString().isLength({max:3}).withMessage('el codigo debe tener max 3 numeros')
+    body('cine').isString().isLength({min:1, max:3}).withMessage('El código del cine debe tener entre 1 y 3 caracteres')
 ]
 export const updatesalasValidator = salasdatos.filter((valor, indice)=>indice<=2)
 
